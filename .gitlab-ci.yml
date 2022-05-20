@@ -1,0 +1,77 @@
+stages:
+  - build
+  - lint
+  - test
+
+build:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --cache=true --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+
+lint:
+  stage: lint
+  image: 
+    name: node:14.8.0-alpine
+  script: 
+    - npm install
+    - npm run tsc
+    - npm run eslint
+
+test-ui:
+  stage: test
+  image:
+    name: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  script: 
+    - cd /src
+    - npm run test:ui
+  after_script:
+    - cd /src
+    - cp -r allure-results $CI_PROJECT_DIR/allure-results
+  artifacts:
+    untracked: true
+    expire_in: 3 days
+    public: false
+    when: always
+    paths: 
+      - allure-results
+
+test-api:
+  stage: test
+  image:
+    name: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  script: 
+    - cd /src
+    - npm run test:api
+  after_script:
+    - cd /src
+    - cp -r allure-results $CI_PROJECT_DIR/allure-results
+  artifacts:
+    untracked: true
+    expire_in: 3 days
+    public: false
+    when: always
+    paths: 
+      - allure-results
+
+test-load:
+  stage: test
+  image:
+    name: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
+  script: 
+    - cd /src
+    - npm run test:load
+  after_script:
+    - cd /src
+    - cp load-test-results.json $CI_PROJECT_DIR/allure-results
+  artifacts:
+    untracked: true
+    expire_in: 3 days
+    public: false
+    when: always
+    paths: 
+      - load-test-results.json

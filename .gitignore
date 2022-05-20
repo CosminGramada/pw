@@ -1,0 +1,7 @@
+node_modules
+dist
+test-results
+results.json
+allure-results
+allure-report
+load-test-results.json
